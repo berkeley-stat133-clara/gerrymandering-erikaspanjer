@@ -1,0 +1,80 @@
+---
+title: Gerrymandering Metrics
+format: typst
+---
+
+### 2024 Election Results and the 2024 District Map
+
+```{r}
+precinct_clean = read_csv("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/precinct_clean.csv")
+
+agg_votes = precinct_clean |>
+    mutate(prop_rep = (CNGREP01 + CNGREP02) / (CNGREP01 + CNGREP02 + CNGDEM01 + CNGDEM02))
+
+agg_votes |>
+    summarize(mean_p = mean(prop_rep),
+        med_p = median(prop_rep)) |>
+    mutate(score = mean_p - med_p)
+ ```
+
+```{r}
+precinct_clean = precinct_clean |>
+    mutate(r_votes = CNGREP01 + CNGREP02,
+            d_votes = CNGDEM01 + CNGDEM02)
+
+n_wasted <- function(by, against) {
+ w_threshold <- floor((by + against) / 2) + 1
+ n_wasted <- ifelse(by > against, by - w_threshold, by)
+ n_wasted
+}
+
+precinct_clean |>
+ mutate(
+ d_wasted = n_wasted(d_votes, r_votes),
+ r_wasted = n_wasted(r_votes, d_votes)
+ ) |>
+ summarize(
+ total_d_wasted = sum(d_wasted),
+ total_r_wasted = sum(r_wasted),
+ total_votes = sum(d_votes + r_votes)
+ ) |>
+ mutate(EG = (total_d_wasted - total_r_wasted) / total_votes)
+```
+
+### 2024 Election Results and the proposed 2025 District Map
+
+
+```{r}
+new_map = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/new_map.shp")
+agg_votes = new_map |>
+    mutate(prop_rep = (CNGREP01 + CNGREP02) / (CNGREP01 + CNGREP02 + CNGDEM01 + CNGDEM02))
+
+agg_votes |>
+    summarize(mean_p = mean(prop_rep),
+        med_p = median(prop_rep)) |>
+    mutate(score = mean_p - med_p)
+ ```
+
+```{r}
+new_map = new_map |>
+    mutate(r_votes = CNGREP01 + CNGREP02,
+            d_votes = CNGDEM01 + CNGDEM02)
+
+n_wasted <- function(by, against) {
+ w_threshold <- floor((by + against) / 2) + 1
+ n_wasted <- ifelse(by > against, by - w_threshold, by)
+ n_wasted
+}
+
+new_map |>
+ mutate(
+ d_wasted = n_wasted(d_votes, r_votes),
+ r_wasted = n_wasted(r_votes, d_votes)
+ ) |>
+ summarize(
+ total_d_wasted = sum(d_wasted),
+ total_r_wasted = sum(r_wasted),
+ total_votes = sum(d_votes + r_votes)
+ ) |>
+ mutate(EG = (total_d_wasted - total_r_wasted) / total_votes)
+```

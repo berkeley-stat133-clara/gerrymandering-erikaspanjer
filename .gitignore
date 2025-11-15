@@ -1,0 +1,22 @@
+# Ignore all shapefiles
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.qpj
+
+# Ignore zips
+*.zip
+
+# Ignore large data
+data/*
+
+# Allow small cleaned CSVs
+!data/precinct_clean.csv
+!data/g24_sov_by_g24_svprec.csv
+!data/state_g24_sov_data_by_g24_srprec.csv
+!data/g24-candidates-by-district.csv
+!data/g24-results-by-district.xlsx
+
+

@@ -1,0 +1,110 @@
+---
+title: Dashboard
+format: dashboard
+---
+
+# Old Map and Summary
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+
+precinct_clean = read_csv("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/precinct_clean.csv")
+sr_precinct = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/sr_precinct.shp")
+AB_shp = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/AB604/AB604.shp")
+```
+
+### Summary Stats
+```{r}
+
+agg_votes = precinct_clean |>
+    mutate(prop_rep = (CNGREP01 + CNGREP02) / (CNGREP01 + CNGREP02 + CNGDEM01 + CNGDEM02))
+
+mean(agg_votes$prop_rep)
+
+agg_votes |>
+    summarize(mean_p = mean(prop_rep),
+        med_p = median(prop_rep)) |>
+    mutate(score = mean_p - med_p)
+
+precinct_clean = precinct_clean |>
+    mutate(r_votes = CNGREP01 + CNGREP02,
+            d_votes = CNGDEM01 + CNGDEM02)
+
+n_wasted <- function(by, against) {
+ w_threshold <- floor((by + against) / 2) + 1
+ n_wasted <- ifelse(by > against, by - w_threshold, by)
+ n_wasted
+}
+
+precinct_clean |>
+ mutate(
+ d_wasted = n_wasted(d_votes, r_votes),
+ r_wasted = n_wasted(r_votes, d_votes)
+ ) |>
+ summarize(
+ total_d_wasted = sum(d_wasted),
+ total_r_wasted = sum(r_wasted),
+ total_votes = sum(d_votes + r_votes)
+ ) |>
+ mutate(EG = (total_d_wasted - total_r_wasted) / total_votes)
+```
+
+### Map
+
+```{r}
+plot(sr_precinct$geometry, col = "red")
+```
+
+
+# New Map
+
+### Summary Stats
+
+```{r}
+new_map = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/new_map.shp")
+
+new_map = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/new_map.shp")
+agg_votes = new_map |>
+    mutate(prop_rep = (CNGREP01 + CNGREP02) / (CNGREP01 + CNGREP02 + CNGDEM01 + CNGDEM02))
+
+mean(prop_rep)
+
+agg_votes |>
+    summarize(mean_p = mean(prop_rep),
+        med_p = median(prop_rep)) |>
+    mutate(score = mean_p - med_p)
+
+new_map = new_map |>
+    mutate(r_votes = CNGREP01 + CNGREP02,
+            d_votes = CNGDEM01 + CNGDEM02)
+
+n_wasted <- function(by, against) {
+ w_threshold <- floor((by + against) / 2) + 1
+ n_wasted <- ifelse(by > against, by - w_threshold, by)
+ n_wasted
+}
+
+new_map |>
+ mutate(
+ d_wasted = n_wasted(d_votes, r_votes),
+ r_wasted = n_wasted(r_votes, d_votes)
+ ) |>
+ summarize(
+ total_d_wasted = sum(d_wasted),
+ total_r_wasted = sum(r_wasted),
+ total_votes = sum(d_votes + r_votes)
+ ) |>
+ mutate(EG = (total_d_wasted - total_r_wasted) / total_votes)
+```
+
+### Map
+
+```{r}
+plot(new_map$geometry, col = "blue")
+```
+
+# Methodology
+I cleaned up the SR and SV precinct files. I calculated the gerrymandering stats. Then I joined them to the new proposed map. This part never fully worked. But I recalculated the stats and just got a lot of NA. Finally I visualized both maps I had created. Gerrymandering is hard to calculate because the statistical methods I used don't hold up in court. 

@@ -1,0 +1,53 @@
+---
+title: Exploratory Data Analysis
+format: typst
+---
+
+### Question 1
+
+What is usual voter turnout at the precincts?
+
+### Answer 1
+
+```{r}
+precinct_clean = read_csv("data/precinct_clean.csv")
+
+ggplot(precinct_clean, aes(x = TOTVOTE)) +
+    geom_histogram(binwidth = 100, fill = "aquamarine4") +
+    xlim(0,3000) +
+    labs(x = "Total Votes", y = "Number of Precincts", title = "Total Vote Counts in Precincts") +
+    theme_bw()
+```
+
+### Question 2
+
+How does voter registration compare to voter turnout? 
+
+### Answer 2
+
+```{r}
+ggplot(precinct_clean, aes(x = TOTREG, y = TOTVOTE)) +
+    geom_point(alpha = .5, color = "darkred") +
+    xlim(0,1000000) +
+    ylim(0, 1000000) +
+    theme_classic() 
+```
+
+### Question 3
+
+Which five precincts had the closest races that weren't a tie?
+
+### Answer 3
+
+```{r}
+precinct_ratio = precinct_clean |>
+    mutate(dem_total = (CNGDEM01 + CNGDEM02),
+    rep_total = (CNGREP01 + CNGREP02), 
+    margin = abs(dem_total - rep_total),
+    percentage = (margin / (dem_total + rep_total)) * 100) |>
+    filter(percentage != 0)
+precinct_ratio |>
+    arrange(percentage) |> 
+    select(COUNTY, SVPREC_KEY, percentage) |>
+    head(5)
+```

@@ -1,0 +1,87 @@
+---
+title: Data Cleaning
+format: typst
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+precinct_messy = read_csv("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/g24_sov_by_g24_svprec.csv")
+precinct_clean = precinct_messy |>
+    select(COUNTY, FIPS, SVPREC, SVPREC_KEY, CDDIST, ADDIST, SDDIST, GEO_TYPE, CNGDEM01, CNGDEM02, CNGREP01, CNGREP02, CNGIND01, TOTVOTE, TOTREG) |>
+    drop_na() |>
+    filter(!if_any(everything(), ~ str_detect(.x, fixed("*")))) |>
+    mutate(CNGDEM01 = as.numeric(CNGDEM01),
+           CNGDEM02 = as.numeric(CNGDEM02),
+           CNGREP02 = as.numeric(CNGREP02),
+           CNGIND01 = as.numeric(CNGIND01),
+           TOTVOTE = as.numeric(TOTVOTE),
+           TOTREG = as.numeric(TOTREG),
+           CNGREP01 = as.numeric(CNGREP01)
+            ) |>
+    filter((CNGDEM01 > 0 | CNGDEM02 > 0) & (CNGREP01 > 0 | CNGREP02 > 0))
+
+```
+
+
+```{r}
+write.csv(precinct_clean, file = "/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/precinct_clean.csv", row.names = F)
+```
+
+# Part 2 Data Cleaning
+
+
+```{r}
+library(sf)
+sr_shp = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/srprec_state_g24_v01_shp (1)/srprec_state_g24_v01_shp.shp")
+```
+
+
+```{r}
+sr_shp <- sr_shp |>
+ st_transform(3310) |> # switch to equal area projection first
+ st_set_precision(1) |> # snap points to 1 m grid
+ st_make_valid() |> # fix self-intersections/bow-ties
+ st_collection_extract("POLYGON")
+
+precinct_clean = precinct_clean |>
+    mutate(SVPREC_KEY = str_remove_all(SVPREC_KEY, "[A-Za-z]"))
+
+sr_shp = sr_shp |>
+    mutate(SRPREC_KEY = str_remove_all(SRPREC_KEY, "[A-Za-z]"))
+
+sr_precinct = sr_shp |>
+    left_join(precinct_clean, by = c("SRPREC_KEY" = "SVPREC_KEY"))
+
+sr_precinct = st_as_sf(sr_precinct)
+
+st_write(sr_precinct,"/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/sr_precinct.shp", row.names = F)
+```
+
+
+```{r}
+AB_shp = st_read("/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/AB604/AB604.shp")
+```
+
+
+```{r}
+AB_shp <- AB_shp |>
+ st_transform(3310) |>
+  st_set_precision(1) |> # snap points to 1 m grid
+ st_make_valid() |> # fix self-intersections/bow-ties
+ st_collection_extract("POLYGON")
+```
+
+
+```{r}
+sr_precinct_geo = sr_precinct |> 
+   select(geometry, CNGDEM01, CNGDEM02, CNGREP01, CNGREP02, CNGIND01, TOTVOTE)
+
+new_map = st_interpolate_aw(x = sr_precinct_geo, to = AB_shp, extensive = T) 
+
+class(new_map)
+st_write(new_map,"/Users/erika.spanjer/Documents/stat133/gerrymandering-erikaspanjer/data/new_map.shp", row.names = F)
+
+```
